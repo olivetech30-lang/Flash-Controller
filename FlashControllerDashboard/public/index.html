@@ -1,28 +1,282 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ESP32 Flash Controller</title>
-<style>
-body { font-family: sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; }
-.card { width:360px; padding:20px; border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,0.1); text-align:center; }
-.controls { display:flex; justify-content:center; gap:10px; margin-top:15px; }
-button { font-size:20px; width:60px; height:40px; border-radius:8px; }
-.slider { width:100%; }
-.value-label { margin-top:10px; font-weight:bold; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Flash Controller</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .led-indicator {
+            animation: pulse var(--blink-speed, 1s) infinite;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        .slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+    </style>
 </head>
-<body>
-<div class="card">
-<h2>ESP32 Flash Controller</h2>
-<div class="controls">
-<button id="decBtn">−</button>
-<input type="range" min="50" max="2000" step="10" id="slider" class="slider">
-<button id="incBtn">+</button>
-</div>
-<div class="value-label">Delay: <span id="delayVal">500</span> ms</div>
-</div>
-<script src="app.js"></script>
+<body class="bg-gray-900 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md w-full">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-white mb-2">⚡ Flash Controller</h1>
+            <p class="text-gray-400">ESP32 RGB LED Blink Speed Control</p>
+        </div>
+
+        <!-- LED Indicator -->
+        <div class="flex justify-center mb-8">
+            <div id="ledIndicator" class="led-indicator w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 shadow-lg shadow-blue-500/50 flex items-center justify-center">
+                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-300 to-purple-500 opacity-80"></div>
+            </div>
+        </div>
+
+        <!-- Current Delay Display -->
+        <div class="bg-gray-700 rounded-xl p-6 mb-6">
+            <div class="text-center">
+                <p class="text-gray-400 text-sm uppercase tracking-wide mb-1">Current Delay</p>
+                <p id="delayDisplay" class="text-5xl font-bold text-blue-400">--</p>
+                <p class="text-gray-500 text-sm mt-1">milliseconds</p>
+            </div>
+        </div>
+
+        <!-- Connection Status -->
+        <div class="flex items-center justify-center gap-2 mb-6">
+            <div id="statusDot" class="w-3 h-3 rounded-full bg-gray-500"></div>
+            <span id="statusText" class="text-gray-400 text-sm">Connecting...</span>
+        </div>
+
+        <!-- Slider Control -->
+        <div class="mb-8">
+            <label class="text-gray-400 text-sm mb-3 block text-center">Delay: <span id="sliderValue">500</span>ms</label>
+            <input 
+                type="range" 
+                id="delaySlider" 
+                min="50" 
+                max="2000" 
+                value="500" 
+                step="10"
+                class="slider w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+            >
+            <div class="flex justify-between text-xs text-gray-500 mt-2">
+                <span>50ms (Fast)</span>
+                <span>2000ms (Slow)</span>
+            </div>
+        </div>
+
+        <!-- Button Controls -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <button 
+                id="decreaseBtn"
+                class="bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-bold py-4 px-6 rounded-xl text-2xl transition-all duration-150 shadow-lg hover:shadow-red-500/30 flex items-center justify-center gap-2"
+            >
+                <span class="text-3xl">−</span>
+                <span class="text-sm">FASTER</span>
+            </button>
+            <button 
+                id="increaseBtn"
+                class="bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-bold py-4 px-6 rounded-xl text-2xl transition-all duration-150 shadow-lg hover:shadow-green-500/30 flex items-center justify-center gap-2"
+            >
+                <span class="text-3xl">+</span>
+                <span class="text-sm">SLOWER</span>
+            </button>
+        </div>
+
+        <!-- Quick Presets -->
+        <div class="mb-6">
+            <p class="text-gray-400 text-sm text-center mb-3">Quick Presets</p>
+            <div class="grid grid-cols-4 gap-2">
+                <button data-delay="100" class="preset-btn bg-gray-700 hover:bg-gray-600 text-white py-2 px-3 rounded-lg text-sm transition-colors">100ms</button>
+                <button data-delay="250" class="preset-btn bg-gray-700 hover:bg-gray-600 text-white py-2 px-3 rounded-lg text-sm transition-colors">250ms</button>
+                <button data-delay="500" class="preset-btn bg-gray-700 hover:bg-gray-600 text-white py-2 px-3 rounded-lg text-sm transition-colors">500ms</button>
+                <button data-delay="1000" class="preset-btn bg-gray-700 hover:bg-gray-600 text-white py-2 px-3 rounded-lg text-sm transition-colors">1000ms</button>
+            </div>
+        </div>
+
+        <!-- Info Box -->
+        <div class="bg-gray-700/50 rounded-lg p-4 text-center">
+            <p class="text-gray-400 text-xs">
+                🔄 Auto-refresh every 1 second<br>
+                📡 ESP32 polls API every 1 second
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONFIGURATION - UPDATE THIS URL AFTER DEPLOY
+        // ============================================
+        const API_BASE_URL = window.location.origin; // Uses same origin when deployed
+        const API_ENDPOINT = `${API_BASE_URL}/api/delay`;
+        const STEP_SIZE = 50; // ms per button press
+        const MIN_DELAY = 50;
+        const MAX_DELAY = 2000;
+        const REFRESH_INTERVAL = 1000; // 1 second
+
+        // ============================================
+        // DOM Elements
+        // ============================================
+        const delayDisplay = document.getElementById('delayDisplay');
+        const sliderValue = document.getElementById('sliderValue');
+        const delaySlider = document.getElementById('delaySlider');
+        const increaseBtn = document.getElementById('increaseBtn');
+        const decreaseBtn = document.getElementById('decreaseBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const ledIndicator = document.getElementById('ledIndicator');
+        const presetBtns = document.querySelectorAll('.preset-btn');
+
+        let currentDelay = 500;
+        let isUpdating = false;
+
+        // ============================================
+        // API Functions
+        // ============================================
+        async function fetchDelay() {
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) throw new Error('API Error');
+                
+                const data = await response.json();
+                currentDelay = data.delay;
+                updateUI();
+                setStatus('connected', 'Connected');
+                return data.delay;
+            } catch (error) {
+                console.error('Fetch error:', error);
+                setStatus('error', 'Connection Error');
+                return null;
+            }
+        }
+
+        async function updateDelay(newDelay) {
+            if (isUpdating) return;
+            isUpdating = true;
+
+            // Clamp the value
+            newDelay = Math.max(MIN_DELAY, Math.min(MAX_DELAY, newDelay));
+
+            try {
+                setStatus('updating', 'Updating...');
+                
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ delay: newDelay })
+                });
+
+                if (!response.ok) throw new Error('Update failed');
+
+                const data = await response.json();
+                currentDelay = data.delay;
+                updateUI();
+                setStatus('connected', 'Connected');
+            } catch (error) {
+                console.error('Update error:', error);
+                setStatus('error', 'Update Failed');
+            } finally {
+                isUpdating = false;
+            }
+        }
+
+        // ============================================
+        // UI Functions
+        // ============================================
+        function updateUI() {
+            delayDisplay.textContent = currentDelay;
+            sliderValue.textContent = currentDelay;
+            delaySlider.value = currentDelay;
+            
+            // Update LED animation speed
+            const blinkSpeed = (currentDelay / 1000) + 's';
+            ledIndicator.style.setProperty('--blink-speed', blinkSpeed);
+        }
+
+        function setStatus(status, text) {
+            statusText.textContent = text;
+            statusDot.className = 'w-3 h-3 rounded-full';
+            
+            switch(status) {
+                case 'connected':
+                    statusDot.classList.add('bg-green-500');
+                    break;
+                case 'updating':
+                    statusDot.classList.add('bg-yellow-500');
+                    break;
+                case 'error':
+                    statusDot.classList.add('bg-red-500');
+                    break;
+                default:
+                    statusDot.classList.add('bg-gray-500');
+            }
+        }
+
+        // ============================================
+        // Event Listeners
+        // ============================================
+        increaseBtn.addEventListener('click', () => {
+            updateDelay(currentDelay + STEP_SIZE);
+        });
+
+        decreaseBtn.addEventListener('click', () => {
+            updateDelay(currentDelay - STEP_SIZE);
+        });
+
+        delaySlider.addEventListener('input', (e) => {
+            sliderValue.textContent = e.target.value;
+        });
+
+        delaySlider.addEventListener('change', (e) => {
+            updateDelay(parseInt(e.target.value));
+        });
+
+        presetBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const delay = parseInt(btn.dataset.delay);
+                updateDelay(delay);
+            });
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp' || e.key === '+') {
+                updateDelay(currentDelay + STEP_SIZE);
+            } else if (e.key === 'ArrowDown' || e.key === '-') {
+                updateDelay(currentDelay - STEP_SIZE);
+            }
+        });
+
+        // ============================================
+        // Initialize
+        // ============================================
+        fetchDelay(); // Initial fetch
+        setInterval(fetchDelay, REFRESH_INTERVAL); // Poll every 1 second
+    </script>
 </body>
 </html>
