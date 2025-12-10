@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ESP32 Flash Controller</title>
+<style>
+body { font-family: sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; }
+.card { width:360px; padding:20px; border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,0.1); text-align:center; }
+.controls { display:flex; justify-content:center; gap:10px; margin-top:15px; }
+button { font-size:20px; width:60px; height:40px; border-radius:8px; }
+.slider { width:100%; }
+.value-label { margin-top:10px; font-weight:bold; }
+</style>
+</head>
+<body>
+<div class="card">
+<h2>ESP32 Flash Controller</h2>
+<div class="controls">
+<button id="decBtn">−</button>
+<input type="range" min="50" max="2000" step="10" id="slider" class="slider">
+<button id="incBtn">+</button>
+</div>
+<div class="value-label">Delay: <span id="delayVal">500</span> ms</div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
